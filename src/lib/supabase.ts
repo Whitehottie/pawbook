@@ -1,10 +1,34 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
-const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
+/** Strip whitespace and accidental quotes from Vercel / .env paste mistakes. */
+function readEnv(value: string | undefined): string {
+  let v = (value ?? '').trim();
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    v = v.slice(1, -1).trim();
+  }
+  return v;
+}
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+function isValidSupabaseUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === 'https:' && parsed.hostname.endsWith('.supabase.co')
+    );
+  } catch {
+    return false;
+  }
+}
+
+const supabaseUrl = readEnv(import.meta.env.VITE_SUPABASE_URL);
+const supabaseAnonKey = readEnv(import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+export const isSupabaseConfigured =
+  Boolean(supabaseUrl && supabaseAnonKey) && isValidSupabaseUrl(supabaseUrl);
 
 // createClient throws when URL is empty — breaks the whole app (white screen on Vercel
 // if VITE_* vars were missing at build time). Use placeholders when not configured.
